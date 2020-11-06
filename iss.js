@@ -1,80 +1,76 @@
 const request = require('request');
 
 const fetchMyIP = (cb) => {
-  request('https://api.ipify.org/?format=json', (error, response, body) => {
-    if (error) {
+  request('https://api.ipify.org?format=json', function (error, response, body) {
+    if(error) {
       cb(error, null);
       return;
     }
     if (response.statusCode !== 200) {
-      const msg = `Status Code ${response.statusCode} when fetching IP. Response: ${body}`
+      const msg = `Status Code ${response.statusCode} when fetching IP. Response: ${body}`;
       cb(Error(msg), null);
       return;
     }
-    const data = JSON.parse(body).ip;
-    cb(null,data);
+    const IP = JSON.parse(body).ip;
+    cb(null, IP);
   })
 };
 
 const fetchCoordsByIP = (ip, cb) => {
-  console.log(ip);
-  request('https://ipvigilante.com/' + ip, (error, response, body) => {
+  request('http://ip-api.com/json/' + ip, (error, response, body) => {
     if (error) {
       cb(error, null);
       return;
     }
     if (response.statusCode !== 200) {
-      const msg = `Status Code ${response.statusCode} when fetching IP. Response: ${body}`
-      cb((msg), null);
-      return;
+      const msg = `Status Code ${response.statusCode} when fetching coords. Response: ${body}`;
+      cb(Error(msg), null);
     }
-    const { latitude, longitude } = JSON.parse(body).data;
-    cb(null, { latitude, longitude });
+    const data = JSON.parse(body);
+    const coords = { lattitude: data.lat, longitude: data.lon };
+    cb(null, coords);
   })
-};
+}
 
 const fetchISSFlyOverTimes = (coords, cb) => {
-  request(`http://api.open-notify.org/iss-pass.json?lat=${coords.latitude}&lon=${coords.longitude}`, (error, response, body) => {
-    
+  const lat = coords.lattitude;
+  const lon = coords.longitude;
+  request(`http://api.open-notify.org/iss-pass.json?lat=${lat}&lon=${lon}`, (error, response, body) => {
     if (error) {
-      cb(error, null);
+      cb(error, null)
       return;
     }
-
     if (response.statusCode !== 200) {
-      const msg = `Status Code ${response.statusCode} when fetching IP. Response: ${body}`
-      cb((msg), null);
+      const msg = `Status Code ${response.statusCode} when fetching times. Response: ${body}`;
+      cb(Error(msg), null);
       return;
     }
-    
-    const responseTimes = JSON.parse(body).response;
-    cb(null, responseTimes);
+    const data = JSON.parse(body);
+    const flyTimes = data.response;
+    console.log(flyTimes);
+    cb(null, flyTimes);
   })
-};
+}
 
 const nextISSTimesForMyLocation = (cb) => {
-
   fetchMyIP((error, ip) => {
     if (error) {
       return cb(error, null);
     }
-
     fetchCoordsByIP(ip, (error, coords) => {
       if (error) {
         return cb(error, null);
       }
-
-      fetchISSFlyOverTimes(coords, (error, responseTimes) => {
+      fetchISSFlyOverTimes(coords, (error, times) => {
         if (error) {
           return cb(error, null);
         }
-        cb(error, responseTimes);
+        cb(null, times);
       })
-    })
-  })
-  
+    });
+  });
+
 };
 
+module.exports = { fetchMyIP, fetchCoordsByIP, fetchISSFlyOverTimes, nextISSTimesForMyLocation }; 
 
-
-module.exports = { nextISSTimesForMyLocation, fetchISSFlyOverTimes, fetchCoordsByIP };
